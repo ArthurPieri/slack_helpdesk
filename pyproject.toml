@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "slack-helpdesk"
+version = "0.1.0"
+description = "Create a simple helpdesk system to help your team manage tickets and define a single point for gondor(your users) to call for aid."
+authors = ["arthurpieri <git@arthurpieri.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+slack-bolt = "^1.18.0"
+python-dotenv = "^1.0.0"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.10.1"
+pylint = "^3.0.2"
+pre-commit = "^3.5.0"
+
+[tool.black]
+line-length = 127
+skip-string-normalization = true
+
+[tool.pylint.messages_control]
+max-line-length = 127
+max-args = 7
+disable = [
+  "missing-docstring",
+  "bare-except",
+  "too-many-locals",
+]
+
+[tool.pylint.BASIC]
+good-names= [
+  "df",
+  "db",
+  "dt",
+  "data-bot",
+]
+
+[tool.pylint.master]
+init-hook = 'import sys; sys.path.append(".")'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
