@@ -1,3 +1,5 @@
+import json
+
 from logging import getLogger
 
 from typing import NamedTuple
@@ -12,14 +14,14 @@ class Ticket(NamedTuple):
     Deffinition of a basic ticket
     """
 
-    _id: str
+    ticket_id: str
     category: str
-    end_date: datetime = None
     start_date: datetime
     user_id: str
     user_name: str
     link: str
     metadata: dict
+    end_date: datetime = None
 
 
 class DbManager:
@@ -38,47 +40,52 @@ class DbManager:
         - db_port: The port of the database
         """
         self._start_log()
-        self._connect_to_db(db_host=db_host, db_port=db_port, db_name=db_name, db_user=db_user, db_password=db_password)
+        self.db_name = db_name
+        self.conn = self._connect_to_db(
+            db_host=db_host, db_port=db_port, db_name=db_name, db_user=db_user, db_password=db_password
+        )
 
     def create_ticket_on_db(self, db_schema: str, db_table: str, ticket: Ticket) -> bool:
         """
         Save the ticket on the database
         """
         cur = self.conn.cursor()
-        query = f"INSERT INTO {db_schema}.{db_table} (id, category, link, metadata, start_date, user_id, user_name)"
+        query = f"INSERT INTO {db_schema}.{db_table} (ticket_id, category, link, metadata, start_date, user_id, user_name)"
         query = query + "VALUES (%s, %s, %s, %s, %s, %s, %s)"
         try:
             cur.execute(
                 query,
                 (
-                    ticket["_id"],
-                    ticket["category"],
-                    ticket["link"],
-                    ticket["metadata"],
-                    ticket["start_date"],
-                    ticket["user_id"],
-                    ticket["user_name"],
+                    ticket.ticket_id,
+                    ticket.category,
+                    ticket.link,
+                    json.dumps(ticket.metadata),
+                    ticket.start_date,
+                    ticket.user_id,
+                    ticket.user_name,
                 ),
             )
             self.conn.commit()
-            cur.close()
             return True
         except Exception as exc:  # pylint: disable=broad-except
             self.log.error("Error inserting ticket on database: %s", exc)
             return False
+        finally:
+            cur.close()
 
-    def close_ticket_on_db(self, db_schema: str, db_table: str, _id: str, end_date: datetime) -> bool:
+    def close_ticket_on_db(self, db_schema: str, db_table: str, ticket_id: str, end_date: datetime) -> bool:
         cur = self.conn.cursor()
         update_query = f"UPDATE {db_schema}.{db_table}"
-        update_query = update_query + " SET end_date = %s WHERE id = %s"
+        update_query = update_query + " SET end_date = %s WHERE ticket_id = %s"
         try:
-            cur.execute(update_query, (end_date, _id))
+            cur.execute(update_query, (end_date, ticket_id))
             self.conn.commit()
-            cur.close()
             return True
         except Exception as exc:  # pylint: disable=broad-except
             self.log.error("Error closing ticket on database: %s", exc)
             return False
+        finally:
+            cur.close()
 
     def _connect_to_db(self, db_host: str, db_port: int, db_name: str, db_user: str, db_password: str):
         """
@@ -86,12 +93,12 @@ class DbManager:
         """
         self.log.info("Connecting to database %s", db_name)
         try:
-            self.conn = connect(
-                database=db_name, user=db_user, password=db_password, host=db_host, port=db_port
-            )  # pylint: disable=attribute-defined-outside-init
+            conn = connect(database=db_name, user=db_user, password=db_password, host=db_host, port=db_port)
             self.log.info("Connected to database %s", db_name)
+            return conn
         except Exception as exc:  # pylint: disable=broad-except
             self.log.error("Error connecting to database: %s", exc)
+            raise exc
 
     def _start_log(self) -> None:
         """
