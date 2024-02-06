@@ -1,12 +1,12 @@
 import json
 
-from logging import getLogger
-
 from typing import NamedTuple
 
 from datetime import datetime
 
 from psycopg2 import connect
+
+from .log_ticket import LoggingBot
 
 
 class Ticket(NamedTuple):
@@ -24,7 +24,7 @@ class Ticket(NamedTuple):
     end_date: datetime = None
 
 
-class DbManager:
+class DbManager(LoggingBot):
     """
     Use this class to create a simple interface to a database.
     In this basic example we'll use a PostgresSQL database.
@@ -39,7 +39,7 @@ class DbManager:
         - db_host: The host of the database
         - db_port: The port of the database
         """
-        self._start_log()
+        super().__init__()
         self.db_name = db_name
         self.conn = self._connect_to_db(
             db_host=db_host, db_port=db_port, db_name=db_name, db_user=db_user, db_password=db_password
@@ -99,12 +99,3 @@ class DbManager:
         except Exception as exc:  # pylint: disable=broad-except
             self.log.error("Error connecting to database: %s", exc)
             raise exc
-
-    def _start_log(self) -> None:
-        """
-        Start logging for class
-        """
-        self.log = getLogger(__name__)  # pylint: disable=attribute-defined-outside-init
-        self.log.info("-----------------------------------------")
-        self.log.info("Initializing %s class", self.__class__.__name__)
-        self.log.info("-----------------------------------------")
